@@ -61,34 +61,35 @@ const afterConnection = () => {
 
             });
             console.log(JSON.stringify(userChoice, null, 2));
-            console.log(userChoice.stock_quantity);
             if (userChoice.stock_quantity > answer.numItems) {
-                const newQuantity = (parseInt(userChoice.stock_quantity) - parseInt(answer.numItems)) + '';
-                console.log(`New Quantity: ${newQuantity}`);
-                console.log(`product name : ${answer.product}`);
+                const newQuantity = (parseInt(userChoice.stock_quantity) - parseInt(answer.numItems));
+                const post = [
+                    {
+                        stock_quantity: newQuantity
+
+                    },
+                    {
+                        product_name: answer.product
+                    }
+                ];
+
                 const thisQuery = "UPDATE products SET ? WHERE ?";
                 connection.query(thisQuery,
-                    [
-                        {
-                            stock_quantity: newQuantity
-
-                        },
-                        {
-                            product_name: "'" + answer.product + "'"
-
-                        }
-                        ], err =>{
-                    console.log(query.sql);
-                    if (err) throw err;
+                    post, err =>{
+                    if (err) {
+                        console.log(err);
+                        throw err;
+                    }
                     console.log(`Purchase Accepted! Your total is ${userChoice.price * parseInt(answer.numItems)}`);
 
                 });
+                console.log(query.sql);
             } else {
                 console.log(`We're sorry, we don't have enough stock to place your order. Try again soon!`);
 
             }
+            connection.end();
+
         })
-        // console.log(res);
-        connection.end();
     });
 };
