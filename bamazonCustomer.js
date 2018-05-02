@@ -14,7 +14,7 @@ connection.connect(err => {
     afterConnection();
 });
 const afterConnection = () => {
-    const query = "SELECT item_id, product_name,department_name, price FROM products";
+    const query = "SELECT * FROM products";
     connection.query(query, (err, res) => {
         if (err) throw err;
         res.forEach((value, index) => {
@@ -28,7 +28,7 @@ const afterConnection = () => {
                 {
                     name: 'product',
                     type: 'list',
-                    choices: function(){
+                    choices: function () {
                         let choiceArray = [];
                         res.forEach(value => {
                             choiceArray.push(value.product_name);
@@ -42,24 +42,51 @@ const afterConnection = () => {
                     type: 'input',
                     message: 'How many of those would you like to purchase?',
                     validate: value => {
-                        if(isNaN(value) === false){
+                        if (isNaN(value) === false) {
                             return true;
-                        }else{
+                        } else {
+                            console.log(' Numbers only please!');
                             return false;
                         }
                     }
                 }
-            ]).then(answer =>{
-                let userChoice;
-                res.forEach(value=>{
-                    if(value.product_name === answer.product) {
-                        userChoice = value;
-                        return userChoice
-                    }
-                });
-                if(userChoice.stock_quantity > answer.numItems){
+            ]).then(answer => {
+            let userChoice;
+            res.forEach(value => {
+                if (value.product_name === answer.product) {
+                    userChoice = value;
+                    return userChoice;
 
                 }
+
+            });
+            console.log(JSON.stringify(userChoice, null, 2));
+            console.log(userChoice.stock_quantity);
+            if (userChoice.stock_quantity > answer.numItems) {
+                const newQuantity = (parseInt(userChoice.stock_quantity) - parseInt(answer.numItems)) + '';
+                console.log(`New Quantity: ${newQuantity}`);
+                console.log(`product name : ${answer.product}`);
+                const thisQuery = "UPDATE products SET ? WHERE ?";
+                connection.query(thisQuery,
+                    [
+                        {
+                            stock_quantity: newQuantity
+
+                        },
+                        {
+                            product_name: "'" + answer.product + "'"
+
+                        }
+                        ], err =>{
+                    console.log(query.sql);
+                    if (err) throw err;
+                    console.log(`Purchase Accepted! Your total is ${userChoice.price * parseInt(answer.numItems)}`);
+
+                });
+            } else {
+                console.log(`We're sorry, we don't have enough stock to place your order. Try again soon!`);
+
+            }
         })
         // console.log(res);
         connection.end();
