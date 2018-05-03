@@ -8,11 +8,31 @@ const connection = mysql.createConnection({
     password: '',
     database: 'bamazon_db'
 });
-connection.connect(err => {
-    if (err) throw err;
-    console.log(`Connected as is ${connection.threadId}`);
-    afterConnection();
-});
+const bamazon = () => {
+    connection.connect(err => {
+        if (err) throw err;
+        console.log(`Connected as is ${connection.threadId}`);
+        inquirer
+            .prompt([
+                {
+                    name: 'yesOrNo',
+                    type: 'list',
+                    message: 'Would you like to buy something today?',
+                    choices: ['Yes','No']
+                }
+
+            ]).then(answer => {
+                if(answer.yesOrNo === 'Yes') {
+                    afterConnection();
+                }else{
+                    console.log('Thanks for taking a look at our inventory! Have a great day!');
+                    connection.end();
+                }
+        })
+    });
+};
+bamazon();
+
 const afterConnection = () => {
     const query = "SELECT * FROM products";
     connection.query(query, (err, res) => {
@@ -81,15 +101,30 @@ const afterConnection = () => {
                         throw err;
                     }
                     console.log(`Purchase Accepted! Your total is ${userChoice.price * parseInt(answer.numItems)}`);
-
+                    inquirer
+                        .prompt([
+                            {
+                                name: 'purchaseMore',
+                                type: 'list',
+                                message: 'Would you like to purchase anything else?',
+                                choices: ['Yes', 'No']
+                            }
+                        ]).then(answer => {
+                            if(answer.purchaseMore === 'Yes'){
+                                afterConnection();
+                            }else{
+                                console.log(`Thank you for your patronage!`);
+                                connection.end();
+                            }
+                    })
                 });
-                console.log(query.sql);
             } else {
                 console.log(`We're sorry, we don't have enough stock to place your order. Try again soon!`);
+                // connection.end();
 
             }
-            connection.end();
 
-        })
+        });
+        // connection.end();
     });
 };
