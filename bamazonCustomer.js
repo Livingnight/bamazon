@@ -76,9 +76,7 @@ const afterConnection = () => {
                 if (value.product_name === answer.product) {
                     userChoice = value;
                     return userChoice;
-
                 }
-
             });
             console.log(JSON.stringify(userChoice, null, 2));
             if (userChoice.stock_quantity > answer.numItems) {
@@ -120,11 +118,7 @@ const afterConnection = () => {
                 });
             } else {
                 console.log(`We're sorry, we don't have enough stock to place your order. Try again soon!`);
-                // connection.end();
-
             }
-
         });
-        // connection.end();
     });
 };
