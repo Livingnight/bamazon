@@ -1,3 +1,5 @@
 node_modules
 .idea
 vim.exe.stackdump
+bamazon
+.env

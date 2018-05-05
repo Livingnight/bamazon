@@ -1,19 +1,9 @@
-const mysql = require('mysql');
-const inquirer = require('inquirer');
+// const mysql = require("mysql");
+const inquirer = require("inquirer");
+const Database = require("./Database");
 
-const connection = mysql.createConnection({
-    host: 'localhost',
-    port: 3306,
-    user: 'root',
-    password: '',
-    database: 'bamazon_db'
-});
+const connection = new Database();
 
-connection.connect(err => {
-    if(err) throw err;
-    console.log(`Connected as ${connection.threadId}`);
-    afterConnection();
-});
 const start = () => {
     inquirer
         .prompt([
@@ -24,16 +14,15 @@ const start = () => {
                 choices: ['Yes', 'No']
             }
         ]).then(answer => {
-            if(answer.returnToStart === 'Yes'){
-                afterConnection();
-            }else{
-                connection.end();
-            }
+        if (answer.returnToStart === 'Yes') {
+            afterConnection();
+        } else {
+            connection.end();
+        }
     })
 };
 const afterConnection = () => {
-    const query = `SELECT * FROM products`;
-    connection.query(query, (err,res,fields) => {
+    connection.selectAll(results => {
         inquirer
             .prompt([
                 {
@@ -42,17 +31,16 @@ const afterConnection = () => {
                     message: 'Please choose what you would like to do.',
                     choices: ['View Products For Sale', 'View Low Inventory', 'Add To Inventory', 'Add New Product']
                 }
-
             ]).then(answer => {
             switch (answer.userChoice) {
                 case 'View Products For Sale':
-                    viewProducts(err,res,fields);
+                    viewProducts(results);
                     break;
                 case 'View Low Inventory':
-                    viewLowInventory(err,res,fields);
+                    viewLowInventory(results);
                     break;
                 case 'Add To Inventory':
-                    addInventory(err,res,fields);
+                    addInventory(results);
                     break;
                 case 'Add New Product':
                     addProduct();
@@ -60,31 +48,32 @@ const afterConnection = () => {
             }
         })
     });
-};
-const viewProducts = (err,res,fields) => {
 
-        if(err) throw err;
-        res.forEach(value => {
-            console.log(`Item ID: ${value.item_id}
+};
+const viewProducts = (results) => {
+
+    // if (err) throw err;
+    results.forEach(value => {
+        console.log(`Item ID: ${value.item_id}
             Product: ${value.product_name}
             Price: ${value.price}
             --------------------`)
-        });
-        start();
+    });
+    start();
 };
-const viewLowInventory = (err,res,fields) => {
-      if(err) throw err;
-      res.forEach(value => {
-          if(value.stock_quantity < 5){
-              console.log(`Item ID: ${value.item_id}
+const viewLowInventory = results => {
+    // if (err) throw err;
+    results.forEach(value => {
+        if (value.stock_quantity < 5) {
+            console.log(`Item ID: ${value.item_id}
               Product: ${value.product_name}
               Price: ${value.price}
               Quantity: ${value.stock_quantity}`);
-          }
-      });
-      start();
+        }
+    });
+    start();
 };
-const addInventory = (err,res,fields) => {
+const addInventory = results => {
     inquirer
         .prompt([
             {
@@ -93,38 +82,35 @@ const addInventory = (err,res,fields) => {
                 message: 'Which product would like to to add inventory to?',
                 choices: () => {
                     let choiceArray = [];
-                    res.forEach(value => {
+                    results.forEach(value => {
                         choiceArray.push(value.product_name);
                     });
                     return choiceArray;
                 }
             },
             {
-              name: 'amountToAdd',
-              type: 'input',
-              message: 'How much inventory would you like to add?',
-              validate: value => {
-                  if(isNaN(value) === false){
-                      return true;
-                  }else{
-                      console.log(` Numbers Only Please!`);
-                      return false;
-                  }
-              }
+                name: 'amountToAdd',
+                type: 'input',
+                message: 'How much inventory would you like to add?',
+                validate: value => {
+                    if (isNaN(value) === false) {
+                        return true;
+                    } else {
+                        console.log(` Numbers Only Please!`);
+                        return false;
+                    }
+                }
             }
         ]).then(answer => {
-            let userChoice;
-            res.forEach(value => {
-                if(value.product_name === answer.product){
-                    userChoice = value;
-                    return userChoice;
-                }
-            });
-        console.log(JSON.stringify(userChoice, null,2));
-        console.log(userChoice.stock_quantity + parseInt(answer.amountToAdd));
-        console.log(answer.product);
-        const query = 'UPDATE products SET ? = ?';
+        let userChoice;
+        results.forEach(value => {
+            if (value.product_name === answer.product) {
+                userChoice = value;
+                return userChoice;
+            }
+        });
         const newQuanitity = parseInt(answer.amountToAdd) + userChoice.stock_quantity;
+
         const post = [
             {
                 stock_quantity: newQuanitity
@@ -133,11 +119,62 @@ const addInventory = (err,res,fields) => {
                 product_name: answer.product
             }
         ];
-        connection.query(query, post, (error, result, fields) => {
-            if(error) throw error;
-            console.log(`You have added ${result.newQuanitity} to ${result.answer.product}!`);
+        connection.update(post, (error, result) => {
+            if (error) throw error;
+            callback(result);
+            console.log(result);
+            console.log(`${answer.product} has an updated quantity of ${newQuanitity}!`);
+            start();
+        });
+
+    })
+
+};
+const addProduct = () => {
+    inquirer
+        .prompt([
+            {
+                name: 'product_name',
+                type: 'input',
+                message: 'What product would you like to add to the site?',
+            },
+            {
+                name: 'department_name',
+                type: 'input',
+                message: 'What department does this product belong in?'
+            },
+            {
+                name: 'price',
+                type: 'input',
+                message: "What is the price of the item?",
+                validate: value => {
+                    if (isNaN(value) === false) {
+                        return true;
+                    } else {
+                        console.log(' Numbers only please!');
+                        return false
+                    }
+                }
+            },
+            {
+                name: 'stock_quantity',
+                type: 'input',
+                message: 'How much inventory would you like to add?',
+                validate: value => {
+                    if (isNaN(value) === false) {
+                        return true;
+                    } else {
+                        console.log(' Numbers only please!');
+                        return false
+                    }
+                }
+            }
+
+        ]).then(answer => {
+        connection.post([answer], results => {
+            console.log('Your Item has been logged to our database.');
             start();
         })
     })
 };
-
+afterConnection();
